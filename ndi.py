@@ -1,31 +1,23 @@
 import time
-from typing import Callable
+from typing import Callable, Optional
 from cyndilib import (
     Finder,
     Source,
     Receiver,
     RecvColorFormat,
     RecvBandwidth,
-    VideoFrameSync
+    VideoFrameSync,
 )
 import numpy as np
-from PIL import Image
-from threading import Thread
 
-class NDI:
-    _instance = None
+from input import DecodeResult, Input
+
+
+class NDI(Input):
     _finder: Finder
-    _source: Source | None = None
-    _receiver: Receiver | None = None
-    _frameSync: VideoFrameSync | None = None
-    _decode: Thread | None = None
-    _is_running: bool = True
-    _callback: Callable[[np.ndarray, tuple[int, int]], None] | None = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+    _source: Optional[Source] = None
+    _receiver: Optional[Receiver] = None
+    _frameSync: Optional[VideoFrameSync] = None
 
     def __del__(self):
         print("Stop NDI")
@@ -60,12 +52,12 @@ class NDI:
         print(self._finder.num_sources)
         self._source = self._finder.get_source(name)
         print(self._source)
-        return self._source != None
+        return self._source is not None
 
     def start(self, callback: Callable[[np.ndarray, tuple[int, int]], None]) -> bool:
-        if self._source == None:
+        if self._source is None:
             return False
-        if self._receiver != None and self._receiver.is_connected():
+        if self._receiver is not None and self._receiver.is_connected():
             self._receiver.disconnect()
         self._receiver = Receiver(
             color_format=RecvColorFormat.RGBX_RGBA,
@@ -80,53 +72,28 @@ class NDI:
                 raise Exception("timeout waiting for connection")
             time.sleep(0.5)
             i += 1
-        print("connected")
-        self._callback = callback
-        self._decode = Thread(target=self.decode)
-        self._decode.run()
+        print("Wait first frame")
+        while self._receiver.is_connected():
+            self._receiver.frame_sync.capture_video()
+            shape = self._frameSync.get_resolution()
+            if min(shape) > 0:
+                break
+            time.sleep(0.1)
+        super().start(callback)
         return True
 
-    def decode(self):
-        while True:
-            if (
-                self._receiver != None
-                and self._frameSync != None
-                and self._callback != None
-            ):
-                break
-            if not self._is_running:
-                return
+    def decode(self) -> DecodeResult:
+        self._fps = self._frameSync.get_frame_rate()
+        shape = self._frameSync.get_resolution()
+        self._receiver.frame_sync.capture_video()
+        if min(shape) <= 0:
             time.sleep(0.1)
-            continue
-        if (
-            self._receiver == None
-            or self._frameSync == None
-            or self._callback == None
-        ):
-            return
-        while self._is_running:
-            frame_rate = self._frameSync.get_frame_rate()
-            print(f"FPS: {frame_rate}")
-            wait = (1.0 / frame_rate)
-            shape = self._frameSync.get_resolution()
-            if min(shape) <= 0:
-                time.sleep(0.1)
-                self._receiver.frame_sync.capture_video()
-                continue
-            data = self._frameSync.get_array().reshape([shape[0], shape[1], 4])
-            self._callback(data, shape)
-            time.sleep(wait)
-            self._receiver.frame_sync.capture_video()
-            pass
-        pass
+            return ((None, None), False)
+        data = self._frameSync.get_array().reshape([shape[0], shape[1], 4])
+        return ((data, shape), False)
 
     def stop(self):
-        if self._decode != None and self._decode.is_alive():
-            self._is_running = False
-            try:
-                self._decode.join(timeout=3)
-            except TimeoutError:
-                pass
-        if self._receiver != None and self._receiver.is_connected():
+        super().stop()
+        if self._receiver is not None and self._receiver.is_connected():
             print("Stop Receiver")
             self._receiver.disconnect()

@@ -1,3 +1,6 @@
 {
-    "source": "SURIGOMAMAIN (Test Pattern)"
+    "source": "ndi",
+    "ndi": {
+        "source": ""
+    }
 }

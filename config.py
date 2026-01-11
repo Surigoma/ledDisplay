@@ -1,20 +1,25 @@
 import json
-from typing import TypedDict
+from typing import Optional, TypedDict
+from singleton import Singleton
+
+
+class ConfigNDI(TypedDict):
+    source: str
+
+
+class ConfigFFmpeg(TypedDict):
+    source: str
 
 
 class ConfigBody(TypedDict):
     source: str
+    ndi: Optional[ConfigNDI]
+    ffmpeg: Optional[ConfigFFmpeg]
 
 
-class Config:
-    _instance = None
+class Config(Singleton):
     _loaded = False
     config: ConfigBody
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
 
     def __init__(self) -> None:
         if not self._loaded:
