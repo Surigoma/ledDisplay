@@ -9,6 +9,7 @@ class ConfigNDI(TypedDict):
 
 class ConfigFFmpeg(TypedDict):
     source: str
+    loop: bool
 
 
 class ConfigInput(TypedDict):

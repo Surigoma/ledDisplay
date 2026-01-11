@@ -3,6 +3,9 @@
         "source": "ndi",
         "ndi": {
             "source": ""
+        },
+        "ffmpeg": {
+            "source": ""
         }
     }
 }

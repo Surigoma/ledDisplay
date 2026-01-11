@@ -3,5 +3,6 @@
     "cyndilib",
     "fromarray",
     "RGBX"
-  ]
+  ],
+  "python.analysis.typeCheckingMode": "standard"
 }

@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Optional
+from typing import Optional
 from cyndilib import (
     Finder,
     Source,
@@ -8,9 +8,8 @@ from cyndilib import (
     RecvBandwidth,
     VideoFrameSync,
 )
-import numpy as np
 
-from input import DecodeResult, Input
+from input import DecodeResult, ImageArgs, ImageCallback, Input
 
 
 class NDI(Input):
@@ -54,7 +53,7 @@ class NDI(Input):
         print(self._source)
         return self._source is not None
 
-    def start(self, callback: Callable[[np.ndarray, tuple[int, int]], None]) -> bool:
+    def start(self, callback: ImageCallback) -> bool:
         if self._source is None:
             return False
         if self._receiver is not None and self._receiver.is_connected():
@@ -83,14 +82,16 @@ class NDI(Input):
         return True
 
     def decode(self) -> DecodeResult:
+        if self._frameSync is None or self._receiver is None:
+            return (ImageArgs(), False, False)
         self._fps = self._frameSync.get_frame_rate()
         shape = self._frameSync.get_resolution()
         self._receiver.frame_sync.capture_video()
         if min(shape) <= 0:
             time.sleep(0.1)
-            return ((None, None), False)
-        data = self._frameSync.get_array().reshape([shape[0], shape[1], 4])
-        return ((data, shape), False)
+            return (ImageArgs(), False, True)
+        data = self._frameSync.get_array().reshape([shape[1], shape[0], 4])
+        return (ImageArgs(data, shape), False, False)
 
     def stop(self):
         super().stop()
