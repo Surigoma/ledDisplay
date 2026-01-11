@@ -1,6 +1,8 @@
 {
-    "source": "ndi",
-    "ndi": {
-        "source": ""
+    "input": {
+        "source": "ndi",
+        "ndi": {
+            "source": ""
+        }
     }
 }

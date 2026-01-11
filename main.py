@@ -1,7 +1,7 @@
 import json
 import sys
 import time
-from config import Config
+from config import Config, ConfigBody
 from ndi import NDI
 import numpy as np
 
@@ -11,23 +11,23 @@ def callback(data: np.ndarray, resolution: tuple):
     pass
 
 
-def setupNDI(config: Config):
+def setupNDI(config: ConfigBody):
     ndi: NDI = NDI()
-    if config.config["ndi"] is None or config.config["ndi"]["source"] == "":
+    if config["input"]["ndi"] is None or config["input"]["ndi"]["source"] == "":
         sources = ndi.getNDISources()
         for i, source in enumerate(sources):
             print(f"{i}: {source}")
         select = int(input("Choice : "))
-        config.config["ndi"]["source"] = f"{sources[select]}"
-    print(json.dumps(config.config))
-    if not ndi.setSource(config.config["ndi"]["source"]):
+        config["input"]["ndi"]["source"] = f"{sources[select]}"
+    print(json.dumps(config))
+    if not ndi.setSource(config["input"]["ndi"]["source"]):
         raise Exception("Failed to connect source.")
     ndi.start(callback)
 
 
 def main():
-    config: Config = Config()
-    if config.config["source"] == "ndi":
+    config: ConfigBody = Config().get()
+    if config["input"]["source"] == "ndi":
         setupNDI(config)
     else:
         sys.exit(0)
