@@ -8,4 +8,5 @@ dependencies = [
     "av>=16.1.0",
     "cyndilib>=0.1.0",
     "pillow>=12.1.0",
+    "pydantic>=2.12.5",
 ]

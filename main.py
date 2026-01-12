@@ -1,12 +1,13 @@
-import json
 import sys
 import time
 from typing import Optional
-from config import Config, ConfigBody
+from config import Config, ConfigBody, ConfigNDI
 from ffmpeg import FFmpeg
 from frameProcess import FrameProcessor
+from imageSampler import ImageSampler
 from input import ImageArgs, ImageCallback
 from ndi import NDI
+
 
 def callback(image: ImageArgs):
     print(image.image.shape if image.image is not None else None, image.shape)
@@ -16,6 +17,7 @@ def callback(image: ImageArgs):
 
 config: ConfigBody = Config().get()
 processor: FrameProcessor = FrameProcessor()
+imageSampler: ImageSampler = ImageSampler()
 ndi: Optional[NDI] = None
 ffmpeg: Optional[FFmpeg] = None
 is_running: bool = True
@@ -24,7 +26,7 @@ is_running: bool = True
 def setupNDI(config: ConfigBody, callback: ImageCallback):
     global ndi
     ndi = NDI()
-    if config["input"]["ndi"] is None or config["input"]["ndi"]["source"] == "":
+    if config.input.ndi is None or config.input.ndi.source == "":
         sources = ndi.getNDISources()
         target = ""
         if len(sources) > 1:
@@ -36,9 +38,9 @@ def setupNDI(config: ConfigBody, callback: ImageCallback):
             target = sources[0]
         else:
             raise Exception("Failed to find NDI source")
-        config["input"]["ndi"] = {"source": ""}
-        config["input"]["ndi"]["source"] = f"{target}"
-    if not ndi.setSource(config["input"]["ndi"]["source"]):
+        config.input.ndi = ConfigNDI(source="")
+        config.input.ndi.source = f"{target}"
+    if not ndi.setSource(config.input.ndi.source):
         raise Exception("Failed to connect source.")
     ndi.start(callback)
 
@@ -46,29 +48,28 @@ def setupNDI(config: ConfigBody, callback: ImageCallback):
 def setupFFmpeg(config: ConfigBody, callback: ImageCallback):
     global ffmpeg
     ffmpeg = FFmpeg()
-    if config["input"]["ffmpeg"] is None or config["input"]["ffmpeg"]["source"] == "":
+    if config.input.ffmpeg is None or config.input.ffmpeg.source == "":
         raise Exception("Failed to find FFmpeg source")
-    if "loop" not in config["input"]["ffmpeg"]:
-        config["input"]["ffmpeg"]["loop"] = True
-    if not ffmpeg.open(
-        config["input"]["ffmpeg"]["source"], 0, config["input"]["ffmpeg"]["loop"]
-    ):
+    if not ffmpeg.open(config.input.ffmpeg.source, 0, config.input.ffmpeg.loop):
         raise Exception("Failed to connect source.")
     ffmpeg.start(callback)
 
+
 def main():
-    global ndi, ffmpeg, is_running
+    global ndi, ffmpeg, is_running, imageSampler
     try:
-        processor.start(callback, 1)
-        if config["input"]["source"] == "ndi":
-            setupNDI(config, processor.process)
-        elif config["input"]["source"] == "ffmpeg":
-            setupFFmpeg(config, processor.process)
+        processor.setup(config.output)
+        imageSampler.setup(config.output)
+        processor.start(callback, config.output.fps)
+        if config.input.source == "ndi":
+            setupNDI(config, processor.update)
+        elif config.input.source == "ffmpeg":
+            setupFFmpeg(config, processor.update)
         else:
             sys.exit(0)
-        print(json.dumps(config))
+        print(config.model_dump_json())
         while is_running:
-            time.sleep(1)
+            time.sleep(0.1)
     except KeyboardInterrupt:
         print("key interrupt")
         if ndi is not None:

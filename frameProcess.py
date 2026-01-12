@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 from PIL import Image
 
+from config import ConfigOutput
 from input import ImageArgs, ImageCallback
 
 
@@ -18,15 +19,21 @@ class FrameProcessor:
     def _frameResample(self):
         print("Start frame Resample")
         while self._is_running:
-            if self._outputFrame is None or self._outputFrame.shape is None or min(self._outputFrame.shape) <= 0:
+            if self._outputFrame is None:
+                time.sleep(0.01)
+                continue
+            if self._outputFrame.shape is None or min(self._outputFrame.shape) <= 0:
                 time.sleep(1.0 / self._framerate)
                 continue
             if self._callback is not None:
-                self._callback(self._outputFrame)
+                self._callback(self.process(self._outputFrame))
             time.sleep(1.0 / self._framerate)
 
     def setResizeShape(self, shape: tuple[int, int]):
         self._reshape = shape
+
+    def setup(self, config: ConfigOutput):
+        self._reshape = config.canvas
 
     def start(self, callback: ImageCallback, framerate: float = 40.0) -> bool:
         self._framerate = framerate
@@ -44,10 +51,13 @@ class FrameProcessor:
         except TimeoutError:
             pass
 
-    def process(self, image: ImageArgs):
+    def update(self, image: ImageArgs):
+        self._outputFrame = image
+
+    def process(self, image: ImageArgs) -> ImageArgs:
         tmp = image
         tmp = self._resize(tmp, self._reshape)
-        self._outputFrame = tmp
+        return tmp
 
     def _resize(self, image: ImageArgs, shape: tuple[int, int]) -> ImageArgs:
         if image.image is None:

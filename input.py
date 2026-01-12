@@ -3,22 +3,27 @@ from threading import Thread
 import time
 from datetime import datetime, timedelta
 from typing import Callable, Optional, TypeAlias
-from io import BytesIO
 
 import numpy as np
 from singleton import Singleton
 
+
 class ImageArgs:
     image: Optional[np.ndarray]
     shape: Optional[tuple[int, int]]
-    def __init__(self, image: Optional[np.ndarray] = None, shape: Optional[tuple[int, int]] = None) -> None:
+
+    def __init__(
+        self,
+        image: Optional[np.ndarray] = None,
+        shape: Optional[tuple[int, int]] = None,
+    ) -> None:
         self.image = image
         self.shape = shape
         pass
 
-# ImageArgs: TypeAlias = tuple[np.ndarray | None, tuple[int, int] | None]
+
 ImageCallback: TypeAlias = Callable[[ImageArgs], None]
-DecodeResult: TypeAlias = tuple[ImageArgs, bool, bool] # Image, isEnd, skipWait
+DecodeResult: TypeAlias = tuple[ImageArgs, bool, bool]  # Image, isEnd, skipWait
 
 
 class Input(Singleton):
@@ -41,19 +46,19 @@ class Input(Singleton):
             image, isEnd, isSkip = self.decode()
             if isEnd:
                 break
-            if not isSkip:
-                if self._callback is not None:
-                    if image is not None:
-                        self._callback(image)
-                if float(self._fps) != 0:
-                    nextTime = (
-                        priv + timedelta(seconds=float(1.0 / self._fps))
-                    ) - datetime.now()
-                    time.sleep(nextTime.total_seconds())
-                    priv = datetime.now()
-            else:
-                print("Skip")
+            if isSkip:
                 time.sleep(0.01)
+            if self._callback is not None:
+                if image is not None:
+                    self._callback(image)
+            if float(self._fps) != 0:
+                nextTime = (
+                    priv + timedelta(seconds=float(1.0 / self._fps))
+                ) - datetime.now()
+                waitTime = nextTime.total_seconds()
+                if waitTime > 0:
+                    time.sleep(waitTime)
+                priv = datetime.now()
 
     def stop(self):
         print("Stop input")

@@ -35,7 +35,14 @@ class FFmpeg(Input):
         frame: av.VideoFrame
         try:
             frame = next(self._videoFrames)
-            return (ImageArgs(frame.to_ndarray(), (frame.width, frame.height)), False, False)
+            return (
+                ImageArgs(
+                    frame.to_rgb().to_ndarray(),
+                    (frame.width, frame.height),
+                ),
+                False,
+                False,
+            )
         except StopIteration:
             if self._loop:
                 self._contents.seek(0)

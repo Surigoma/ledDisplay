@@ -1,25 +1,48 @@
 import json
-from typing import Optional, TypedDict
+from typing import Literal, Optional, TypeAlias, Union
+
+from pydantic import BaseModel
 from singleton import Singleton
 
+Point: TypeAlias = tuple[int, int]
 
-class ConfigNDI(TypedDict):
+
+class ConfigNDI(BaseModel):
     source: str
 
 
-class ConfigFFmpeg(TypedDict):
+class ConfigFFmpeg(BaseModel):
     source: str
-    loop: bool
+    loop: bool = True
 
 
-class ConfigInput(TypedDict):
+class ConfigInput(BaseModel):
     source: str
     ndi: Optional[ConfigNDI]
     ffmpeg: Optional[ConfigFFmpeg]
 
 
-class ConfigBody(TypedDict):
+class ConfigPixel(BaseModel):
+    sampleType: Literal["pixel"]
+    point: Point
+
+
+class ConfigLine(BaseModel):
+    sampleType: Literal["line"]
+    start: Point
+    end: Point
+    count: int
+
+
+class ConfigOutput(BaseModel):
+    sampler: list[Union[ConfigPixel, ConfigLine]]
+    fps: float
+    canvas: tuple[int, int] = (192, 108)
+
+
+class ConfigBody(BaseModel):
     input: ConfigInput
+    output: ConfigOutput
 
 
 class Config(Singleton):
@@ -43,5 +66,5 @@ class Config(Singleton):
 
     def load_config(self):
         with open("./config.json", "r", encoding="utf-8") as f:
-            self.config = json.load(f)
+            self.config = ConfigBody.model_validate(json.load(f))
         self._loaded = True
