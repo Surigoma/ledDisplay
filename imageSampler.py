@@ -1,5 +1,6 @@
 import json
 from config import ConfigLine, ConfigOutput, ConfigPixel, Point
+from input import ImageArgs
 
 
 class ImageSampler:
@@ -17,6 +18,9 @@ class ImageSampler:
             result.append((round(dx * percent), round(dy * percent)))
         return result
 
+    def sampleLen(self):
+        return len(self._samplePoint)
+
     def setup(self, config: ConfigOutput):
         for sample in config.sampler:
             points: list[Point]
@@ -28,3 +32,11 @@ class ImageSampler:
                 continue
             self._samplePoint.extend(points)
         print(json.dumps(self._samplePoint))
+
+    def sample(self, image: ImageArgs):
+        result: list[tuple[int, int, int]] = [(0, 0, 0)] * len(self._samplePoint)
+        if image.image is None:
+            return result
+        for i, point in enumerate(self._samplePoint):
+            result[i] = image.image[point[1], point[0]][:3]
+        return result

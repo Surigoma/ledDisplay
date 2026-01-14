@@ -1,7 +1,9 @@
 {
   "cSpell.words": [
+    "artnet",
     "cyndilib",
     "fromarray",
+    "pyartnet",
     "RGBX"
   ],
   "python.analysis.typeCheckingMode": "standard"

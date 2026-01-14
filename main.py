@@ -7,13 +7,7 @@ from frameProcess import FrameProcessor
 from imageSampler import ImageSampler
 from input import ImageArgs, ImageCallback
 from ndi import NDI
-
-
-def callback(image: ImageArgs):
-    print(image.image.shape if image.image is not None else None, image.shape)
-    # if image.image is not None:
-    #     Image.fromarray(image.image).save("./tmp.bmp")
-
+from output import ArtNet
 
 config: ConfigBody = Config().get()
 processor: FrameProcessor = FrameProcessor()
@@ -21,6 +15,13 @@ imageSampler: ImageSampler = ImageSampler()
 ndi: Optional[NDI] = None
 ffmpeg: Optional[FFmpeg] = None
 is_running: bool = True
+artnet: ArtNet = ArtNet()
+
+
+def callback(image: ImageArgs):
+    global imageSampler, artnet
+    samples = imageSampler.sample(image)
+    artnet.queue(samples)
 
 
 def setupNDI(config: ConfigBody, callback: ImageCallback):
@@ -56,10 +57,12 @@ def setupFFmpeg(config: ConfigBody, callback: ImageCallback):
 
 
 def main():
-    global ndi, ffmpeg, is_running, imageSampler
+    global ndi, ffmpeg, is_running, imageSampler, artnet
     try:
         processor.setup(config.output)
         imageSampler.setup(config.output)
+        artnet.setup(config.output, imageSampler.sampleLen())
+        artnet.start()
         processor.start(callback, config.output.fps)
         if config.input.source == "ndi":
             setupNDI(config, processor.update)
@@ -77,6 +80,7 @@ def main():
         if ffmpeg is not None:
             ffmpeg.stop()
         processor.stop()
+        artnet.stop()
 
 
 if __name__ == "__main__":

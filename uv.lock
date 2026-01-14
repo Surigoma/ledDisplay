@@ -115,6 +115,7 @@ dependencies = [
     { name = "av" },
     { name = "cyndilib" },
     { name = "pillow" },
+    { name = "pyartnet" },
     { name = "pydantic" },
 ]
 
@@ -123,6 +124,7 @@ requires-dist = [
     { name = "av", specifier = ">=16.1.0" },
     { name = "cyndilib", specifier = ">=0.1.0" },
     { name = "pillow", specifier = ">=12.1.0" },
+    { name = "pyartnet", specifier = ">=2.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
 ]
 
@@ -284,6 +286,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/74/fe2ac378e4e202e56d50540d92e1ef4ff34ed687f3c60f6a121bcf99437e/pillow-12.1.0-pp311-pypy311_pp73-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:53d8b764726d3af1a138dd353116f774e3862ec7e3794e0c8781e30db0f35dfc", size = 5313824, upload-time = "2026-01-02T09:13:22.405Z" },
     { url = "https://files.pythonhosted.org/packages/f3/77/2a60dee1adee4e2655ac328dd05c02a955c1cd683b9f1b82ec3feb44727c/pillow-12.1.0-pp311-pypy311_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5da841d81b1a05ef940a8567da92decaa15bc4d7dedb540a8c219ad83d91808a", size = 5963278, upload-time = "2026-01-02T09:13:24.706Z" },
     { url = "https://files.pythonhosted.org/packages/2d/71/64e9b1c7f04ae0027f788a248e6297d7fcc29571371fe7d45495a78172c0/pillow-12.1.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:75af0b4c229ac519b155028fa1be632d812a519abba9b46b20e50c6caa184f19", size = 7029809, upload-time = "2026-01-02T09:13:26.541Z" },
+]
+
+[[package]]
+name = "pyartnet"
+version = "2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/d7/6d75c0bcaab1418e9f378549bca8a73a4c614fb2a051e333bc93b97cbfc1/pyartnet-2.0.tar.gz", hash = "sha256:da88614eae7ed2feeeb741a7a790201668a12f7d5c458730cbe08677d4ad5c71", size = 16296, upload-time = "2025-11-04T05:56:59.573Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/56/a98750ea692d74ed5c2fe30760c93b4878097a1815c4c9ae3a9877d37292/pyartnet-2.0-py3-none-any.whl", hash = "sha256:f0e181dbdcce30806460685ae1ec45444b8ece446caac8593b5e42f327ac9a3d", size = 26146, upload-time = "2025-11-04T05:56:58.139Z" },
 ]
 
 [[package]]
