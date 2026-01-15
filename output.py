@@ -1,16 +1,18 @@
 import asyncio
-from multiprocessing import Queue
+from queue import Queue
 from queue import Empty
 import numpy as np
-from pyartnet import ArtNetNode, BaseUniverse, Channel # pyright: ignore[reportPrivateImportUsage]
+from pyartnet import ArtNetNode, BaseUniverse, Channel  # pyright: ignore[reportPrivateImportUsage]
 from threading import Thread
 
 from config import ConfigOutput
+
 
 class Universe:
     universe: BaseUniverse
     mapping: tuple[int, int]
     dataMap: Channel
+
 
 class ArtNet:
     _address: str
@@ -19,14 +21,18 @@ class ArtNet:
     _is_running: bool = True
     _send_queue: Queue
     _universes: list[Universe] = []
+    _fillEnd: bool = False
 
     def setup(self, config: ConfigOutput, sampleLen: int):
         self._send_queue = Queue()
         self._address = config.address
         self._fps = int(config.fps)
         chanPerUniv = 512
-        if config.mapping is not None and not config.mapping.strict:
-            chanPerUniv = 510
+        if config.mapping is not None:
+            if not config.mapping.strict:
+                chanPerUniv = 510
+            if config.mapping.fillEnd:
+                self._fillEnd = True
         full = sampleLen * 3
         for i in range(0, full, chanPerUniv):
             univ = Universe()
@@ -38,35 +44,44 @@ class ArtNet:
         self._send_queue.put(np.array(samples).flatten().tolist())
 
     def start(self):
-        self._thread = Thread(target=self.process)
+        self._thread = Thread(target=self.process, name="artnet", daemon=True)
         self._thread.start()
 
     def stop(self):
         self._is_running = False
         if self._thread is not None:
-            self._thread.join()
+            self._thread.join(timeout=1.0)
 
     async def _async_process(self):
         print("start artnet")
-        async with ArtNetNode.create(self._address, 6454, name="test", max_fps=self._fps, refresh_every=1) as artnet:
-            artnet.set_synchronous_mode(False)
+        async with ArtNetNode.create(
+            self._address, 6454, name="test", max_fps=self._fps, refresh_every=1
+        ) as artnet:
+            artnet.set_synchronous_mode(True)
             for i, univ in enumerate(self._universes):
                 univ.universe = artnet.add_universe(i)
                 length = univ.mapping[1] - univ.mapping[0]
-                univ.dataMap = univ.universe.add_channel(1, length, "led")
+                univ.dataMap = univ.universe.add_channel(1, length, f"led{i}")
                 univ.universe.send_data()
             while self._is_running:
                 try:
                     data: list[int] = self._send_queue.get(True, timeout=0.5)
                     for univ in self._universes:
                         # print(univ.mapping, data[univ.mapping[0]:univ.mapping[1]])
-                        univ.dataMap.set_values(data[univ.mapping[0]:univ.mapping[1]])
+                        split = data[univ.mapping[0] : univ.mapping[1]]
+                        if self._fillEnd:
+                            padding = 512 - len(split)
+                            if padding > 0:
+                                split.extend([0] * padding)
+                        univ.dataMap.set_values(split)
                         univ.universe.send_data()
                 except Empty:
-                    print("timeout")
+                    # print("timeout")
+                    pass
                 except Exception as e:
                     print(e)
                     break
+            await artnet.stop_refresh()
         print("stop artnet")
 
     def process(self):

@@ -9,30 +9,32 @@
         }
     },
     "output": {
+        "address": "192.168.1.255",
         "canvas": [
-            192,
-            108
+            1920,
+            1080
         ],
+        "mapping": {
+            "strict": true,
+            "fillEnd": false
+        },
         "fps": 40,
         "sampler": [
-            {
-                "sampleType": "pixel",
-                "point": [
-                    0,
-                    0
-                ]
-            },
             {
                 "sampleType": "line",
                 "start": [
                     0,
-                    0
+                    512
                 ],
                 "end": [
-                    191,
-                    107
+                    1919,
+                    512
                 ],
-                "count": 10
+                "count": 310
+            },
+            {
+                "sampleType": "dummy",
+                "count": 200
             }
         ]
     }

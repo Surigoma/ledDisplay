@@ -33,7 +33,7 @@ class Input(Singleton):
 
     def start(self, callback: ImageCallback) -> bool:
         self._callback = callback
-        self._thread = Thread(target=self._decode)
+        self._thread = Thread(target=self._decode, name="Input", daemon=True)
         self._thread.start()
         return True
 
@@ -68,6 +68,6 @@ class Input(Singleton):
         if not self._thread.is_alive():
             return
         try:
-            self._thread.join(timeout=3.0)
+            self._thread.join(timeout=1.0)
         except TimeoutError:
             pass

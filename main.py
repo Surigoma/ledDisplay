@@ -69,7 +69,7 @@ def main():
         elif config.input.source == "ffmpeg":
             setupFFmpeg(config, processor.update)
         else:
-            sys.exit(0)
+            return
         print(config.model_dump_json())
         while is_running:
             time.sleep(0.1)
@@ -79,10 +79,17 @@ def main():
             ndi.stop()
         if ffmpeg is not None:
             ffmpeg.stop()
-        processor.stop()
-        artnet.stop()
+        is_running = False
+    return
 
 
 if __name__ == "__main__":
     main()
+    processor.stop()
+    artnet.stop()
     print("STOP")
+    # for t in threading.enumerate():
+    #     print("thread", t.name, t.is_alive)
+    # for k, f in sys._current_frames().items():
+    #     traceback.print_stack()
+    sys.exit(0)

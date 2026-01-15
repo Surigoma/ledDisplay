@@ -34,11 +34,18 @@ class ConfigLine(BaseModel):
     count: int
 
 
+class ConfigDummy(BaseModel):
+    sampleType: Literal["dummy"]
+    count: int
+
+
 class ConfigOutputMapping(BaseModel):
-    strict: bool = True
+    strict: Optional[bool] = True
+    fillEnd: Optional[bool] = True
+
 
 class ConfigOutput(BaseModel):
-    sampler: list[Union[ConfigPixel, ConfigLine]]
+    sampler: list[Union[ConfigPixel, ConfigLine, ConfigDummy]]
     fps: float
     canvas: tuple[int, int] = (192, 108)
     address: str

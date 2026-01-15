@@ -38,7 +38,9 @@ class FrameProcessor:
     def start(self, callback: ImageCallback, framerate: float = 40.0) -> bool:
         self._framerate = framerate
         self._callback = callback
-        self._thread = Thread(target=self._frameResample)
+        self._thread = Thread(
+            target=self._frameResample, name="FrameProcessor", daemon=True
+        )
         self._thread.start()
         return True
 
