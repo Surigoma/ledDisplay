@@ -1,6 +1,5 @@
 import json
 
-import numpy as np
 from config import ConfigDummy, ConfigLine, ConfigOutput, ConfigPixel, Point
 from input import ImageArgs
 
