@@ -1,6 +1,7 @@
 import asyncio
 from queue import Queue
 from queue import Empty
+from queue import Full
 import numpy as np
 from pyartnet import ArtNetNode, BaseUniverse, Channel  # pyright: ignore[reportPrivateImportUsage]
 from threading import Thread
@@ -26,7 +27,7 @@ class ArtNet:
     _fillEnd: bool = False
 
     def setup(self, config: ConfigOutput, sampleLen: int):
-        self._send_queue = Queue()
+        self._send_queue = Queue(maxsize=1)
         self._universes = []
         self._fillEnd = False
         self._address = config.address
@@ -98,7 +99,16 @@ class ArtNet:
         print([(univ.id, univ.mappings) for univ in self._universes])
 
     def queue(self, samples: list[tuple[int, int, int]]):
-        self._send_queue.put(np.array(samples).flatten().tolist())
+        data = np.array(samples).flatten().tolist()
+        while True:
+            try:
+                self._send_queue.put_nowait(data)
+                return
+            except Full:
+                try:
+                    self._send_queue.get_nowait()
+                except Empty:
+                    pass
 
     def start(self):
         self._thread = Thread(target=self.process, name="artnet", daemon=True)
