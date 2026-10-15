@@ -15,6 +15,7 @@ class Universe:
     mappings: list[tuple[int, int, int, int]]
     channelLength: int
     dataMap: Channel
+    buffer: bytearray
 
 
 class ArtNet:
@@ -102,10 +103,13 @@ class ArtNet:
         if source_start != sampleLen * 3:
             raise ValueError("sampler length and Art-Net mapping length do not match")
         self._universes = [universes[key] for key in sorted(universes)]
+        for univ in self._universes:
+            channel_length = 512 if self._fillEnd else univ.channelLength
+            univ.buffer = bytearray(channel_length)
         print([(univ.id, univ.mappings) for univ in self._universes])
 
     def queue(self, samples: list[tuple[int, int, int]]):
-        data = np.array(samples).flatten().tolist()
+        data = np.asarray(samples, dtype=np.uint8).reshape(-1).tobytes()
         while True:
             try:
                 self._send_queue.put_nowait(data)
@@ -140,22 +144,20 @@ class ArtNet:
                 )
             while self._is_running:
                 try:
-                    data: list[int] = await asyncio.to_thread(
+                    data: bytes = await asyncio.to_thread(
                         self._send_queue.get, True, 0.5
                     )
                     for univ in self._universes:
-                        channel_length = 512 if self._fillEnd else univ.channelLength
-                        split = [0] * channel_length
                         for (
                             source_start,
                             source_end,
                             destination_start,
                             destination_end,
                         ) in univ.mappings:
-                            split[destination_start:destination_end] = data[
+                            univ.buffer[destination_start:destination_end] = data[
                                 source_start:source_end
                             ]
-                        univ.dataMap.set_values(split)
+                        univ.dataMap.set_values(univ.buffer)
                 except Empty:
                     # print("timeout")
                     pass
