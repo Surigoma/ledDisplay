@@ -5,7 +5,8 @@ from input import ImageArgs
 
 
 class ImageSampler:
-    _samplePoint: list[Point] = []
+    def __init__(self):
+        self._samplePoint: list[Point] = []
 
     def _generatePoint(self, config: ConfigPixel) -> list[Point]:
         return [config.point]
@@ -31,6 +32,7 @@ class ImageSampler:
         return len(self._samplePoint)
 
     def setup(self, config: ConfigOutput):
+        self._samplePoint = []
         for sample in config.sampler:
             points: list[Point]
             if sample.sampleType == "pixel":
