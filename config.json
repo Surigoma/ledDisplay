@@ -9,16 +9,16 @@
         }
     },
     "output": {
-        "address": "192.168.1.255",
+        "address": "192.168.31.10",
         "canvas": [
             1920,
             1080
         ],
         "mapping": {
             "strict": true,
-            "fillEnd": false
+            "fillEnd": true
         },
-        "fps": 40,
+        "fps": 30,
         "sampler": [
             {
                 "sampleType": "line",
@@ -30,11 +30,35 @@
                     1919,
                     512
                 ],
-                "count": 310
+                "count": 310,
+                "universe": 0,
+                "channel": 1
             },
             {
                 "sampleType": "dummy",
-                "count": 200
+                "count": 200,
+                "universe": 1,
+                "channel": 419
+            },
+            {
+                "sampleType": "line",
+                "start": [
+                    0,
+                    512
+                ],
+                "end": [
+                    1919,
+                    512
+                ],
+                "count": 310,
+                "universe": 3,
+                "channel": 1
+            },
+            {
+                "sampleType": "dummy",
+                "count": 10,
+                "universe": 5,
+                "channel": 1
             }
         ]
     }

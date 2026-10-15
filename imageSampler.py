@@ -51,5 +51,6 @@ class ImageSampler:
         for i, point in enumerate(self._samplePoint):
             if point[0] < 0 or point[1] < 0:
                 result[i] = (0, 0, 0)
+                continue
             result[i] = image.image[point[1], point[0]][:3]
         return result

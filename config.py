@@ -1,7 +1,7 @@
 import json
 from typing import Literal, Optional, TypeAlias, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from singleton import Singleton
 
 Point: TypeAlias = tuple[int, int]
@@ -22,19 +22,34 @@ class ConfigInput(BaseModel):
     ffmpeg: Optional[ConfigFFmpeg]
 
 
-class ConfigPixel(BaseModel):
+class ConfigSampler(BaseModel):
+    universe: Optional[int] = None
+    channel: Optional[int] = None
+
+    @model_validator(mode="after")
+    def validate_output_position(self):
+        if (self.universe is None) != (self.channel is None):
+            raise ValueError("universe and channel must be specified together")
+        if self.universe is not None and not 0 <= self.universe <= 32767:
+            raise ValueError("universe must be between 0 and 32767")
+        if self.channel is not None and not 1 <= self.channel <= 512:
+            raise ValueError("channel must be between 1 and 512")
+        return self
+
+
+class ConfigPixel(ConfigSampler):
     sampleType: Literal["pixel"]
     point: Point
 
 
-class ConfigLine(BaseModel):
+class ConfigLine(ConfigSampler):
     sampleType: Literal["line"]
     start: Point
     end: Point
     count: int
 
 
-class ConfigDummy(BaseModel):
+class ConfigDummy(ConfigSampler):
     sampleType: Literal["dummy"]
     count: int
 

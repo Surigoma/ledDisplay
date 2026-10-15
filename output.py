@@ -5,12 +5,14 @@ import numpy as np
 from pyartnet import ArtNetNode, BaseUniverse, Channel  # pyright: ignore[reportPrivateImportUsage]
 from threading import Thread
 
-from config import ConfigOutput
+from config import ConfigOutput, ConfigPixel
 
 
 class Universe:
+    id: int
     universe: BaseUniverse
-    mapping: tuple[int, int]
+    mappings: list[tuple[int, int, int, int]]
+    channelLength: int
     dataMap: Channel
 
 
@@ -25,6 +27,8 @@ class ArtNet:
 
     def setup(self, config: ConfigOutput, sampleLen: int):
         self._send_queue = Queue()
+        self._universes = []
+        self._fillEnd = False
         self._address = config.address
         self._fps = int(config.fps)
         chanPerUniv = 512
@@ -33,12 +37,65 @@ class ArtNet:
                 chanPerUniv = 510
             if config.mapping.fillEnd:
                 self._fillEnd = True
-        full = sampleLen * 3
-        for i in range(0, full, chanPerUniv):
-            univ = Universe()
-            univ.mapping = (i, i + min(chanPerUniv, full - i))
-            self._universes.append(univ)
-        print([k.mapping for k in self._universes])
+        has_explicit_mapping = any(
+            sample.universe is not None for sample in config.sampler
+        )
+        if has_explicit_mapping and any(
+            sample.universe is None for sample in config.sampler
+        ):
+            raise ValueError(
+                "universe and channel must be set for every sampler when using explicit mapping"
+            )
+
+        universes: dict[int, Universe] = {}
+        source_start = 0
+        legacy_destination = 0
+        for sample in config.sampler:
+            sample_count = 1 if isinstance(sample, ConfigPixel) else sample.count
+            remaining = sample_count * 3
+            if has_explicit_mapping:
+                assert sample.universe is not None and sample.channel is not None
+                destination = sample.universe * chanPerUniv + sample.channel - 1
+            else:
+                destination = legacy_destination
+
+            while remaining > 0:
+                universe_id = destination // chanPerUniv
+                destination_start = destination % chanPerUniv
+                length = min(remaining, chanPerUniv - destination_start)
+                source_end = source_start + length
+                destination_end = destination_start + length
+
+                if universe_id not in universes:
+                    univ = Universe()
+                    univ.id = universe_id
+                    univ.mappings = []
+                    univ.channelLength = 0
+                    universes[universe_id] = univ
+                univ = universes[universe_id]
+                if any(
+                    destination_start < existing_end
+                    and destination_end > existing_start
+                    for _, _, existing_start, existing_end in univ.mappings
+                ):
+                    raise ValueError(
+                        f"sampler output overlaps universe {universe_id} "
+                        f"channels {destination_start + 1}-{destination_end}"
+                    )
+                univ.mappings.append(
+                    (source_start, source_end, destination_start, destination_end)
+                )
+                univ.channelLength = max(univ.channelLength, destination_end)
+                source_start = source_end
+                destination += length
+                remaining -= length
+
+            legacy_destination = destination
+
+        if source_start != sampleLen * 3:
+            raise ValueError("sampler length and Art-Net mapping length do not match")
+        self._universes = [universes[key] for key in sorted(universes)]
+        print([(univ.id, univ.mappings) for univ in self._universes])
 
     def queue(self, samples: list[tuple[int, int, int]]):
         self._send_queue.put(np.array(samples).flatten().tolist())
@@ -58,23 +115,30 @@ class ArtNet:
             self._address, 6454, name="test", max_fps=self._fps, refresh_every=1
         ) as artnet:
             artnet.set_synchronous_mode(True)
-            for i, univ in enumerate(self._universes):
-                univ.universe = artnet.add_universe(i)
-                length = univ.mapping[1] - univ.mapping[0]
-                univ.dataMap = univ.universe.add_channel(1, length, f"led{i}")
-                univ.universe.send_data()
+            for univ in self._universes:
+                univ.universe = artnet.add_universe(univ.id)
+                channel_length = 512 if self._fillEnd else univ.channelLength
+                univ.dataMap = univ.universe.add_channel(
+                    1, channel_length, f"led{univ.id}"
+                )
             while self._is_running:
                 try:
-                    data: list[int] = self._send_queue.get(True, timeout=0.5)
+                    data: list[int] = await asyncio.to_thread(
+                        self._send_queue.get, True, 0.5
+                    )
                     for univ in self._universes:
-                        # print(univ.mapping, data[univ.mapping[0]:univ.mapping[1]])
-                        split = data[univ.mapping[0] : univ.mapping[1]]
-                        if self._fillEnd:
-                            padding = 512 - len(split)
-                            if padding > 0:
-                                split.extend([0] * padding)
+                        channel_length = 512 if self._fillEnd else univ.channelLength
+                        split = [0] * channel_length
+                        for (
+                            source_start,
+                            source_end,
+                            destination_start,
+                            destination_end,
+                        ) in univ.mappings:
+                            split[destination_start:destination_end] = data[
+                                source_start:source_end
+                            ]
                         univ.dataMap.set_values(split)
-                        univ.universe.send_data()
                 except Empty:
                     # print("timeout")
                     pass
