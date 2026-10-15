@@ -1,5 +1,4 @@
-from threading import Thread
-import time
+from threading import Event, Lock, Thread
 from typing import Optional
 import numpy as np
 from PIL import Image
@@ -22,19 +21,29 @@ class FrameProcessor:
         self._is_running = False
         self._outputFrame = None
         self._reshape = (192, 108)
+        self._frame_lock = Lock()
+        self._frame_ready = Event()
+        self._frame_version = 0
+        self._processed_version = -1
 
     def _frameResample(self):
         print("Start frame Resample")
         while self._is_running:
-            if self._outputFrame is None:
-                time.sleep(0.01)
+            if not self._frame_ready.wait(timeout=0.1):
                 continue
-            if self._outputFrame.shape is None or min(self._outputFrame.shape) <= 0:
-                time.sleep(1.0 / self._framerate)
+            self._frame_ready.clear()
+            with self._frame_lock:
+                if self._frame_version == self._processed_version:
+                    frame = None
+                else:
+                    frame = self._outputFrame
+                    self._processed_version = self._frame_version
+            if frame is None:
+                continue
+            if frame.shape is None or min(frame.shape) <= 0:
                 continue
             if self._callback is not None:
-                self._callback(self.process(self._outputFrame))
-            time.sleep(1.0 / self._framerate)
+                self._callback(self.process(frame))
 
     def setResizeShape(self, shape: tuple[int, int]):
         self._reshape = shape
@@ -44,6 +53,7 @@ class FrameProcessor:
 
     def start(self, callback: ImageCallback, framerate: float = 40.0) -> bool:
         self._is_running = True
+        self._processed_version = -1
         self._framerate = framerate
         self._callback = callback
         self._thread = Thread(
@@ -56,13 +66,17 @@ class FrameProcessor:
         if not self._is_running or self._thread is None:
             return
         self._is_running = False
+        self._frame_ready.set()
         try:
             self._thread.join(timeout=1.0)
         except TimeoutError:
             pass
 
     def update(self, image: ImageArgs):
-        self._outputFrame = image
+        with self._frame_lock:
+            self._outputFrame = image
+            self._frame_version += 1
+        self._frame_ready.set()
 
     def process(self, image: ImageArgs) -> ImageArgs:
         tmp = image
