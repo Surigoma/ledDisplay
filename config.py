@@ -1,4 +1,7 @@
 import json
+import os
+from pathlib import Path
+import tempfile
 from typing import Literal, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, model_validator
@@ -88,8 +91,22 @@ class Config(Singleton):
     def save(self):
         if not self._loaded:
             return
-        with open("./config.json", "w", encoding="utf-8") as f:
-            json.dump(self.config, f)
+        config_path = Path("./config.json")
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=config_path.parent,
+                delete=False,
+            ) as f:
+                temporary_path = Path(f.name)
+                json.dump(self.config.model_dump(), f, indent=4)
+                f.write("\n")
+            os.replace(temporary_path, config_path)
+        finally:
+            if temporary_path is not None and temporary_path.exists():
+                temporary_path.unlink()
 
     def load_config(self):
         with open("./config.json", "r", encoding="utf-8") as f:
