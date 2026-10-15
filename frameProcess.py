@@ -16,6 +16,13 @@ class FrameProcessor:
     _framerate: float
     _reshape: tuple[int, int] = (192, 108)
 
+    def __init__(self):
+        self._callback = None
+        self._thread = None
+        self._is_running = False
+        self._outputFrame = None
+        self._reshape = (192, 108)
+
     def _frameResample(self):
         print("Start frame Resample")
         while self._is_running:
@@ -36,6 +43,7 @@ class FrameProcessor:
         self._reshape = config.canvas
 
     def start(self, callback: ImageCallback, framerate: float = 40.0) -> bool:
+        self._is_running = True
         self._framerate = framerate
         self._callback = callback
         self._thread = Thread(

@@ -26,6 +26,12 @@ class ArtNet:
     _universes: list[Universe] = []
     _fillEnd: bool = False
 
+    def __init__(self):
+        self._thread = None
+        self._is_running = False
+        self._universes = []
+        self._fillEnd = False
+
     def setup(self, config: ConfigOutput, sampleLen: int):
         self._send_queue = Queue(maxsize=1)
         self._universes = []
@@ -111,6 +117,7 @@ class ArtNet:
                     pass
 
     def start(self):
+        self._is_running = True
         self._thread = Thread(target=self.process, name="artnet", daemon=True)
         self._thread.start()
 

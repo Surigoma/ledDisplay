@@ -27,6 +27,7 @@ class NDI(Input):
         print("Stopped Finder")
 
     def __init__(self) -> None:
+        super().__init__()
         print("Start NDI")
         self._finder = Finder()
         self._finder.open()

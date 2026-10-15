@@ -31,7 +31,13 @@ class Input(Singleton):
     _fps: Fraction = Fraction(30, 1)
     _is_running: bool = True
 
+    def __init__(self):
+        self._thread = None
+        self._fps = Fraction(30, 1)
+        self._is_running = False
+
     def start(self, callback: ImageCallback) -> bool:
+        self._is_running = True
         self._callback = callback
         self._thread = Thread(target=self._decode, name="Input", daemon=True)
         self._thread.start()
