@@ -12,6 +12,8 @@ class ImageSampler:
         return [config.point]
 
     def _generateLine(self, config: ConfigLine) -> list[Point]:
+        if config.count == 1:
+            return [config.start]
         result: list[Point] = []
         dx = config.end[0] - config.start[0]
         dy = config.end[1] - config.start[1]
@@ -43,6 +45,19 @@ class ImageSampler:
                 points = self._generateDummy(sample)
             else:
                 continue
+            if sample.sampleType != "dummy":
+                width, height = config.canvas
+                if any(
+                    point[0] < 0
+                    or point[0] >= width
+                    or point[1] < 0
+                    or point[1] >= height
+                    for point in points
+                ):
+                    raise ValueError(
+                        f"{sample.sampleType} sampler contains a point outside "
+                        f"the {width}x{height} canvas"
+                    )
             self._samplePoint.extend(points)
         print(json.dumps(self._samplePoint))
 

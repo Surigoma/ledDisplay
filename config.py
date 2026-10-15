@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 from typing import Literal, Optional, TypeAlias, Union
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 from singleton import Singleton
 
 Point: TypeAlias = tuple[int, int]
@@ -49,12 +49,12 @@ class ConfigLine(ConfigSampler):
     sampleType: Literal["line"]
     start: Point
     end: Point
-    count: int
+    count: int = Field(ge=1)
 
 
 class ConfigDummy(ConfigSampler):
     sampleType: Literal["dummy"]
-    count: int
+    count: int = Field(ge=1)
 
 
 class ConfigOutputMapping(BaseModel):
