@@ -3,11 +3,11 @@ name = "leddisplay"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "av>=16.1.0",
+    "av>=18.0.0,<19",
     "cyndilib>=0.1.0",
-    "pillow>=12.1.0",
+    "pillow>=13.0.0",
     "pyartnet>=2.0",
     "pydantic>=2.12.5",
 ]
